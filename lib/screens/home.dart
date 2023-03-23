@@ -4,12 +4,14 @@ import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_spinkit/flutter_spinkit.dart';
+import 'package:hive_flutter/adapters.dart';
 import 'package:http/http.dart' as http;
 import 'package:imdb_project/box.dart';
 import 'package:imdb_project/model/Results.dart';
 import 'package:imdb_project/model/liked_movie.dart';
-import 'package:imdb_project/screens/like_movie.dart';
+import 'package:imdb_project/screens/like_screen.dart';
 import 'package:imdb_project/utils/popup.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class Home extends StatefulWidget {
   const Home({Key? key}) : super(key: key);
@@ -27,12 +29,19 @@ class _HomeState extends State<Home> {
   final searchController = TextEditingController();
   int _page = 1;
   List<LikedMovie> _likedMovies = [];
-  int _selectedIndex = -1;
 
+  final box1 = Boxes1.getData();
+  List<LikedMovie> favMovieList = [];
+  List<LikedMovie> likedMovies = [];
+
+  bool? l = false;
   @override
   void initState() {
     super.initState();
     _scrollController.addListener(_scrollListener);
+    favMovieList = box1.values.toList();
+    likedMovies = favMovieList.where((element)=> element.email == '3@gmail.com').toList();
+
     getPopularMovies();
   }
 
@@ -160,6 +169,7 @@ class _HomeState extends State<Home> {
                                   );
                                 } else {
                                   final movie = movieList[index];
+
                                   return Column(
                                     children: [
                                       Container(
@@ -261,30 +271,15 @@ class _HomeState extends State<Home> {
                                                         ],
                                                       ),
                                                       IconButton(
-                                                          onPressed: () {
-                                                            if (_selectedIndex ==
-                                                                index) {
-                                                              _selectedIndex =
-                                                                  -1;
-                                                            } else {
-                                                              _selectedIndex =
-                                                                  index;
-
-                                                            }
+                                                          onPressed: () async {
                                                             addLikedMovie(
                                                                 movie);
                                                           },
                                                           icon: Icon(
-                                                            index ==
-                                                                    _selectedIndex
-                                                                ? Icons.favorite
-                                                                : Icons
-                                                                    .favorite_border,
-                                                            color: index ==
-                                                                    _selectedIndex
-                                                                ? Colors.yellow
-                                                                : Colors.white,
-                                                          ))
+                                                              (movie.like ?? false) ?  Icons
+                                                                  .favorite: Icons.favorite_border,
+                                                              color: Colors
+                                                                  .yellow))
                                                     ],
                                                   ),
                                                 ],
@@ -356,16 +351,25 @@ class _HomeState extends State<Home> {
         movies.add(movie);
       }
 
-      setState(() {
         if (isFirstLoad) {
           movieList = movies;
           isFirstLoad = false;
         } else {
           movieList.addAll(movies);
         }
+
+        for (var index = 0 ; index < movieList.length ; index ++){
+          var isMoviesLiked = favMovieList.where((element) => element.id == movieList[index].id).isNotEmpty;
+          if(isMoviesLiked){
+            movieList[index].like = true;
+          } else {
+            movieList[index].like = false;
+          }
+        }
+
         isLoading = false;
         hasMore = jsonData['page'] < jsonData['total_pages'];
-      });
+        setState(() {});
     } else {
       throw Exception('Failed to load movies');
     }
@@ -405,9 +409,11 @@ class _HomeState extends State<Home> {
       _likedMovies = likedMovies;
     });
   }
-
   Future<void> addLikedMovie(Results movie) async {
+
+    SharedPreferences prefs = await SharedPreferences.getInstance();
     final LikedMovie likedMovie = LikedMovie(
+      email: prefs.getString('email'),
       id: movie.id,
       title: movie.title,
       posterPath: movie.imagePath,
@@ -418,8 +424,12 @@ class _HomeState extends State<Home> {
     );
     final box = Boxes1.getData();
     if (!box.containsKey(movie.id)) {
+     movie.like = true;
+     likedMovie.isLike = movie.like;
       box.put(movie.id, likedMovie);
     } else {
+      movie.like=false;
+      likedMovie.isLike = false;
       box.delete(movie.id);
     }
     _loadLikedMovies();

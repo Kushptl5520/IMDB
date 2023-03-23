@@ -194,7 +194,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                                 final box = Boxes.getData();
                                   box.add(data1);
                                   data1.save();
-                                prefs.setString('email', emailController.text.trim());
+                                prefs.setString('email', emailController.text.trim().toString());
                                   Get.toNamed(MyRoutes.signinScreen)?.then((value){
                                     nameController.clear();
                                     emailController.clear();

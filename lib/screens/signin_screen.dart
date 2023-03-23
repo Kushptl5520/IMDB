@@ -220,6 +220,8 @@ class _SigninScreenState extends State<SigninScreen> {
                           );
                         }
                         else {
+                          SharedPreferences prefs = await SharedPreferences.getInstance();
+                          prefs.setString('email', emailController.text.trim().toString());
                           Get.toNamed(MyRoutes.homeScreen);
                         }
                       }),

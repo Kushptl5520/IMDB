@@ -24,13 +24,15 @@ class LikedMovieAdapter extends TypeAdapter<LikedMovie> {
       vote_count: fields[6] as dynamic,
       release_date: fields[3] as dynamic,
       vote_average: fields[5] as dynamic,
+      email: fields[7] as dynamic,
+      isLike: fields[8] as bool?,
     );
   }
 
   @override
   void write(BinaryWriter writer, LikedMovie obj) {
     writer
-      ..writeByte(7)
+      ..writeByte(9)
       ..writeByte(0)
       ..write(obj.id)
       ..writeByte(1)
@@ -44,7 +46,11 @@ class LikedMovieAdapter extends TypeAdapter<LikedMovie> {
       ..writeByte(5)
       ..write(obj.vote_average)
       ..writeByte(6)
-      ..write(obj.vote_count);
+      ..write(obj.vote_count)
+      ..writeByte(7)
+      ..write(obj.email)
+      ..writeByte(8)
+      ..write(obj.isLike);
   }
 
   @override

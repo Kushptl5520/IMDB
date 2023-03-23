@@ -7,7 +7,7 @@ class Results {
   var release_date;
   var original_language;
   var id;
-
+  bool? like;
   Results({
     this.original_language,
     this.overview,
@@ -17,6 +17,7 @@ class Results {
     this.vote_average,
     this.vote_count,
     this.id,
+    this.like,
   });
 
   factory Results.fromJson(Map<String,dynamic>json) {
@@ -28,7 +29,8 @@ class Results {
       title: json['title'],
       vote_average: json['vote_average'],
       vote_count: json['vote_count'],
-      id: json['id']
+      id: json['id'],
+      like: false,
     );
   }
   String getPosterUrl() {
