@@ -1,20 +1,25 @@
+import 'dart:async';
 import 'dart:convert';
 
+import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_spinkit/flutter_spinkit.dart';
-import 'package:hive_flutter/adapters.dart';
+import 'package:get/get.dart';
+import 'package:get/get_core/src/get_main.dart';
 import 'package:http/http.dart' as http;
 import 'package:imdb_project/box.dart';
 import 'package:imdb_project/model/Results.dart';
 import 'package:imdb_project/model/liked_movie.dart';
 import 'package:imdb_project/screens/like_screen.dart';
 import 'package:imdb_project/utils/popup.dart';
+import 'package:internet_connection_checker/internet_connection_checker.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class Home extends StatefulWidget {
-  const Home({Key? key}) : super(key: key);
+
+   Home({Key? key}) : super(key: key);
 
   @override
   State<Home> createState() => _HomeState();
@@ -34,17 +39,34 @@ class _HomeState extends State<Home> {
   List<LikedMovie> favMovieList = [];
   List<LikedMovie> likedMovies = [];
 
-  bool? l = false;
+  late StreamSubscription subscription;
+  bool isDeviceConnected = false;
+  bool isAlertSet = false;
+  getConnectivity() =>
+      subscription = Connectivity().onConnectivityChanged.listen(
+            (ConnectivityResult result) async {
+          isDeviceConnected = await InternetConnectionChecker().hasConnection;
+          if (!isDeviceConnected && isAlertSet == false) {
+            showDialogBox();
+            setState(() => isAlertSet = true);
+          }
+        },
+      );
   @override
   void initState() {
     super.initState();
+    getConnectivity();
     _scrollController.addListener(_scrollListener);
-    favMovieList = box1.values.toList();
-    likedMovies = favMovieList.where((element)=> element.email == '3@gmail.com').toList();
-
+    likedata;
+    getLike();
     getPopularMovies();
-  }
 
+  }
+  getLike()async{
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    favMovieList = box1.values.toList();
+    likedMovies = favMovieList.where((element)=> element.email == prefs.get('email')).toList();
+  }
   @override
   Widget build(BuildContext context) {
     return WillPopScope(
@@ -153,6 +175,7 @@ class _HomeState extends State<Home> {
                       Flexible(
                         child: Stack(
                           children: [
+
                             ListView.builder(
                               physics: const BouncingScrollPhysics(),
                               controller: _scrollController,
@@ -167,9 +190,12 @@ class _HomeState extends State<Home> {
                                       ),
                                     ),
                                   );
-                                } else {
-                                  final movie = movieList[index];
+                                }
 
+                                else {
+                                  final box = Boxes1.getData();
+                                  final data = box.get(movieList[index].id);
+                                  final movie = movieList[index];
                                   return Column(
                                     children: [
                                       Container(
@@ -274,9 +300,29 @@ class _HomeState extends State<Home> {
                                                           onPressed: () async {
                                                             addLikedMovie(
                                                                 movie);
+                                                            if(movie.like == false){
+                                                              Get.snackbar(
+                                                                '🥳',
+                                                                'Add Successfully',
+                                                                colorText: Colors.white,
+                                                                snackPosition: SnackPosition.BOTTOM,
+                                                                duration: Duration(milliseconds: 1500),
+                                                                margin: EdgeInsets.only(bottom: 30,left: 15,right: 15),
+                                                              );
+                                                            }else{
+                                                              Get.snackbar(
+                                                                '😪',
+                                                                'Remove Successfully',
+                                                                colorText: Colors.white,
+                                                                snackPosition: SnackPosition.BOTTOM,
+                                                                duration: Duration(milliseconds: 1500),
+                                                                margin: EdgeInsets.only(bottom: 30,left: 15,right: 15),
+                                                              );
+                                                            }
+
                                                           },
                                                           icon: Icon(
-                                                              (movie.like ?? false) ?  Icons
+                                                              (movie.like ?? false ) ?  Icons
                                                                   .favorite: Icons.favorite_border,
                                                               color: Colors
                                                                   .yellow))
@@ -330,6 +376,7 @@ class _HomeState extends State<Home> {
     setState(() {
       isLoading = true;
     });
+
     String? url;
     if (searchController.text.isEmpty) {
       url =
@@ -338,6 +385,7 @@ class _HomeState extends State<Home> {
       url =
           'https://api.themoviedb.org/3/search/movie?api_key=b4a549abb798b19dbb7e63335d135053&query=${searchController.text.trim()}&page=${movieList.length ~/ 20 + _page}';
     }
+
     final response = await http.get(Uri.parse(url));
 
     if (response.statusCode == 200) {
@@ -359,14 +407,17 @@ class _HomeState extends State<Home> {
         }
 
         for (var index = 0 ; index < movieList.length ; index ++){
-          var isMoviesLiked = favMovieList.where((element) => element.id == movieList[index].id).isNotEmpty;
+          var isMoviesLiked = likedMovies.where((element) => element.id == movieList[index].id).isNotEmpty;
           if(isMoviesLiked){
-            movieList[index].like = true;
+            setState(() {
+              movieList[index].like = true;
+            });
           } else {
-            movieList[index].like = false;
+            setState(() {
+              movieList[index].like = false;
+            });
           }
         }
-
         isLoading = false;
         hasMore = jsonData['page'] < jsonData['total_pages'];
         setState(() {});
@@ -401,7 +452,7 @@ class _HomeState extends State<Home> {
   Future<bool> showExitPopup() async {
     return await SystemChannels.platform.invokeMethod('SystemNavigator.pop');
   }
-
+  bool? likedata = false;
   void _loadLikedMovies() async {
     final likedMoviesBox = Boxes1.getData();
     final List<LikedMovie> likedMovies = likedMoviesBox.values.toList();
@@ -410,7 +461,6 @@ class _HomeState extends State<Home> {
     });
   }
   Future<void> addLikedMovie(Results movie) async {
-
     SharedPreferences prefs = await SharedPreferences.getInstance();
     final LikedMovie likedMovie = LikedMovie(
       email: prefs.getString('email'),
@@ -424,14 +474,46 @@ class _HomeState extends State<Home> {
     );
     final box = Boxes1.getData();
     if (!box.containsKey(movie.id)) {
-     movie.like = true;
-     likedMovie.isLike = movie.like;
-      box.put(movie.id, likedMovie);
+      setState(() {
+        movie.like = true;
+        likedMovie.isLike = movie.like;
+        likedata = likedMovie.isLike;
+        print(likedata);
+        box.put(movie.id, likedMovie);
+      });
     } else {
-      movie.like=false;
-      likedMovie.isLike = false;
-      box.delete(movie.id);
+      setState(() {
+        movie.like=false;
+        likedMovie.isLike = false;
+        likedata = likedMovie.isLike;
+        print(likedata);
+
+        box.delete(movie.id);
+
+      });
     }
     _loadLikedMovies();
   }
+  showDialogBox() => showCupertinoDialog<String>(
+    context: context,
+    builder: (BuildContext context) => CupertinoAlertDialog(
+      title: const Text('No Connection'),
+      content: const Text('Please check your internet connectivity'),
+      actions: <Widget>[
+        TextButton(
+          onPressed: () async {
+            Navigator.pop(context, 'Cancel');
+            setState(() => isAlertSet = false);
+            isDeviceConnected =
+            await InternetConnectionChecker().hasConnection;
+            if (!isDeviceConnected && isAlertSet == false) {
+              showDialogBox();
+              setState(() => isAlertSet = true);
+            }
+          },
+          child: const Text('OK'),
+        ),
+      ],
+    ),
+  );
 }

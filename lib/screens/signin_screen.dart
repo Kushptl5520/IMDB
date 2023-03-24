@@ -2,6 +2,7 @@
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:hive/hive.dart';
 import 'package:imdb_project/box.dart';
 import 'package:imdb_project/model/register_model.dart';
 import 'package:imdb_project/routes/route.dart';
@@ -106,6 +107,7 @@ class _SigninScreenState extends State<SigninScreen> {
                                     focusedBorder: OutlineInputBorder(
                                         borderSide: BorderSide(
                                             color: Colors.transparent))),
+
                               ),
                             ),
                           ),
@@ -199,24 +201,35 @@ class _SigninScreenState extends State<SigninScreen> {
                             'Error',
                             ErrorMessage.emptyEmail,
                             snackPosition: SnackPosition.BOTTOM,
+                            duration: Duration(milliseconds: 1500),
+                            margin: EdgeInsets.only(bottom: 30,left: 15,right: 15),
                           );
-                        } else if (isEmailExist.isEmpty) {
+                        }
+                        else if (isEmailExist.isEmpty) {
                           Get.snackbar(
                             'Error',
                             ErrorMessage.userNotFound,
                             snackPosition: SnackPosition.BOTTOM,
+                            duration: Duration(milliseconds: 1500),
+
+                            margin: EdgeInsets.only(bottom: 30,left: 15,right: 15),
                           );
                         } else if (passwordController.text.trim().isEmpty) {
                           Get.snackbar(
                             'Error',
                             ErrorMessage.emptyPassword,
                             snackPosition: SnackPosition.BOTTOM,
+                            duration: Duration(milliseconds: 1500),
+
+                            margin: EdgeInsets.only(bottom: 30,left: 15,right: 15),
                           );
                         } else if (isPasswordExist.isEmpty) {
                           Get.snackbar(
                             'Error',
                             ErrorMessage.incorrectPass,
                             snackPosition: SnackPosition.BOTTOM,
+                            duration: Duration(milliseconds: 1500),
+                            margin: EdgeInsets.only(bottom: 30,left: 15,right: 15),
                           );
                         }
                         else {
